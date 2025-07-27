@@ -18,6 +18,7 @@ class DavConnect:
     def_calendar:str = None
     principal:Principal = None
 
+
     @property
     def config_name(self)->str:
         return self._config.name

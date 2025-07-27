@@ -5,6 +5,7 @@ from db import Config, ConfigSetting
 from db.tables import update_table, get_uuid_dates, QueryObject, fetch_data
 from .caldav_lib import get_connection,close_connection,calendar_from_dav,DavCals
 # from .cresacat_dummy_model import dummy
+from enum import Enum
 
 cf = Config.setting_by_name('crescat')
 url = cf.value
@@ -41,12 +42,6 @@ def calendar_update(config:ConfigSetting,events:list):
 #   Tables manip
 ##################################################################
 
-def get_dbevent_by_date(dt:int,cal:str)->dict:
-    qr = QueryObject(table=cal,
-                     search_column='startdate',
-                     search_column_value=str(dt))
-    res = fetch_data(qr,True)
-    return res[0]
 
 def update_tables(table:str = None):
     func = {'link':calendar_from_link,
@@ -58,7 +53,16 @@ def update_tables(table:str = None):
     # entries_to_del = [k for k in uuids_in_db.keys() if k not in uuids_in_fetch]
     update_table(table,data)
 
+##################################################################
+#   To Export
+##################################################################
 
+class CalendarManips(Enum):
+    from_dav = calendar_from_dav
+    from_link = calendar_from_link
+    update = calendar_update
+    get_dav = get_connection
+    close_dav = close_connection
 
 
 # print(requests.get(url).text)

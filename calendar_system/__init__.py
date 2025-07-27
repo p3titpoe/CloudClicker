@@ -1,2 +1,1 @@
-from .calendar_manips import calendar_from_dav,calendar_from_link,calendar_update
-
+from .calendar_manips import CalendarManips, DavCals
