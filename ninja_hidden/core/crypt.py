@@ -41,6 +41,8 @@ def _randomize(split:str|list,force_nmbr:int = None)->dict:
             splitkey[idx] = None
             new_obj_len += 1
     new_k = [p for p in obj]
+    # print("PASS   ::",passphrase)
+    # print("SPLIT  ::",split)
     # print(len("".join(new_k)))
     return {'passkey':passphrase,'key':"".join(new_k)}
 
@@ -98,19 +100,13 @@ def _fingerprinting(fingerprint:list[int])->list:
 
 def _randomize2_n(token:str,passphrase:list)->dict:
     token = list(token)
-
     new_passphrase = [str(x) if x >= 10 else f"{KeyGenerators.text('alpha',1)}{x}" for x in passphrase]
-    new_token = [f'{x}{KeyGenerators.text('alpha',1)}' for x in token]
+    new_token = [f'{x}{KeyGenerators.text('all',1)}' for x in token]
     new_token.extend(new_passphrase)
     fingerprint = []
-    conv = ['a','b','']
-    res =_randomize(new_token)
+    res =_randomize(new_token,1)
+    print("RANDD :: ",res)
     fingerprint = _fingerprinting(res['passkey'])
-    # fingerprint = [str(x) if x >= 26 else f"{KeyGenerators.text('all',1)}{KeyGenerators.char_by_idx('alpha',x)}" for x in
-    #                   res['passkey']]
-    gg = ''.join([str(x) for x in res['passkey']])
-    # print('og passkes ::: ',res['passkey'])
-    # print('og passkes list len ::: ',len(res['passkey']))
     return {'fingerprint':"".join(fingerprint),'token':res['key'],'olpass':res['passkey'],'ogfp':fingerprint}
 
 def _urandomize2_n(fingerprint:str,ctrl:list=None,ctrl2:list=None)->list:
@@ -127,59 +123,88 @@ def _urandomize2_n(fingerprint:str,ctrl:list=None,ctrl2:list=None)->list:
                 ll = KeyGenerators.char_lists('upper')[0]
                 idx = ll.index(scnd)
                 out.append(idx)
-                # print(f"Alpha Up: IDX: {idx}  Number: {idx}  Control:{ct}   finger:{ct2}   chunk: {chunk}")
             if scnd.islower():
                 ll = KeyGenerators.char_lists('lower')[0]
                 idx = ll.index(scnd)
                 out.append(idx+52)
-                # print(f"Alphs Lo: IDX: {idx}  Number: {idx+52}  Control:{ct}   finger:{ct2}   chunk: {chunk}")
 
         elif first.isdigit():
             ll = KeyGenerators.char_lists('upper')[0]
             idx = ll.index(scnd)
             out.append(idx + 26)
-            # print(f"Digit Up: IDX: {idx}  Number: {idx+26}  Control:{ct}   finger:{ct2}    chunk: {chunk}")
 
         elif first in list(string.punctuation):
             ll = KeyGenerators.char_lists('lower')[0]
             idx = ll.index(scnd)
             out.append(idx + 78)
-            # print(f"Punct Lo: IDX: {idx}  Number: {idx}  Control:{ct}   finger:{ct2}    chunk: {chunk}")
         else:
-            print(f"None:  imput: {first} {scnd}  Control:{ct}   finger:{ct2}    chunk: {chunk}")
+            print(f"None:  imput: {first} {scnd}  chunk: {chunk}")
         x = x+2
     return out
 
-def _randomize3(passkey:dict,key:str):
-    chk = passkey[3]
-    key = list(key)
+def _urandomize2(matrix:dict,fingerprint):
+    pass
+
+def _randomize3a(passkey:list,key:str)->bytes:
+    chars = list(key)
+    out = {}
+    k = ""
+    for i,p in enumerate(passkey):
+        out[p] = key[i]
+
+    sortd = sorted(out)
+    for n in sortd:
+        k += out[n]
+    return bytes(k,'utf-8')
+
+def _randomize3(passkey:list,key:str):
+    chk = passkey
     objlen = len(chk)
-    keylen = len(key)
     tocheck = {}
     out = ""
-    step = 1
-    if objlen == keylen:
-        for i in range(0,objlen,step):
-            char = key[i:i+step]
-            # print(char)
-            tocheck[chk[i]] = char
-    #
-        order = sorted(tocheck)
+    step = 2
+    i = 0
+    cnt = 0
+    while cnt < objlen:
+        char = key[i:i+step]
+        # print(char)
+        tocheck[chk[cnt]] = char
+        cnt += 1
+        i+=2
+    order = sorted(tocheck)
 
-        for x in order:
-            out += tocheck[x][0]
+    for x in order:
+        out += tocheck[x]
     return bytes(out,'utf-8')
 
-def _randomize4():
-    pass
+def _randomize4(key:bytes|str)->dict:
+    if isinstance(key,bytes):
+        key = key.decode()
+    cntlen = int(len(key)/2)
+    msb = []
+    lsb = []
+    i = 0
+    cnt = 0
+    while cnt < cntlen:
+        char = key[i:i+2]
+        if cnt < 44:
+            msb.append(char[0])
+        else:
+            if char.isdigit():
+                ch = char
+            else:
+                ch = char[1]
+            lsb.append(int(ch))
+        cnt += 1
+        i+=2
+    return {'key':''.join(msb),'passkey':lsb}
 
 ########################################################################################################################
 # Maker & Userclasses
 ########################################################################################################################
 @dataclass(repr=False)
-class KyMaker:
+class KyMakerOLD:
     """Generate the ingredients for the """
-    _mtrx:dict[int:str]
     _mstrk:bytes = None
     _token1:str = None
     _token2:str = None
@@ -244,6 +269,68 @@ class KyMaker:
         # print(pth.parent)
         # print(p)
 
+@dataclass(repr=False)
+class KyMakerBase:
+    _k:bytes = None
+    _salt:str = None
+    _result:dict = None
+
+    def __post_init__(self):
+        self._result = {}
+        if self._salt is None:
+            self._salt = KeyGenerators.text('all',22)
+        if self._k is None:
+            self._k = KeyGenerators.key()
+        self.generate()
+
+    def generate(self):
+        pass
+
+
+@dataclass(repr=False)
+class KyMakerSystem(KyMakerBase):
+
+    def generate(self):
+        randdm = _randomize(self._k.decode(),1)
+        fp = _randomize2_n(randdm['key'],randdm['passkey'])
+        print(randdm)
+        print(fp)
+        mtrx = KeyGenerators.matrix(44,44)
+        mtrx_sig = _randomize2(mtrx,self._k.decode())
+        prep = {k:None for k in range(0,11)}
+        for p in mtrx_sig['passkey']:
+            for i,n in enumerate(p):
+                ch =""
+                if prep[i] is None:
+                    prep[i] = []
+                ch = n
+                # if n<10:
+                #     ch=f"{KeyGenerators.text('alpha',1)}{n}"
+                prep[i].append(ch)
+
+        msb_fp = _fingerprinting(prep[0])
+        msb = "".join(msb_fp)
+        lsb_fp = _fingerprinting(prep[1])
+        lsb = "".join(lsb_fp)
+        for m in [msb,lsb]:
+            if len(m) != 88:
+                diff =  88-(len(m))
+                print(diff)
+                sfix = '@'*diff
+                m = m+sfix
+
+        print(len(msb))
+        print(len(lsb))
+        # prep_mtrx = _randomize(_fingerprinting(prep),1)
+        # fp_mtrx = _randomize2_n(prep_mtrx['key'],prep_mtrx['passkey'])
+        # print(fp_mtrx)
+        # print(prep_mtrx)
+        #
+        # print(_urandomize2_n(fp_mtrx['fingerprint']))
+
+
+
+
 
 @dataclass(init=False)
 class KyUser:
@@ -251,7 +338,7 @@ class KyUser:
     _phase:dict
     _scnd:str
 
-    def __init__(self, inp:KyMaker):
+    def __init__(self, inp:KyMakerBase):
         self._token = inp._token1
         self._phase = inp._phases
         self._scnd = inp._scnd
@@ -274,29 +361,4 @@ class KyUser:
         k = self._load_key()
         out = k.decrypt(val)
         return out.decode()
-
-
-@dataclass
-class KyCombinator:
-    _k1:KyMaker = None
-    _k2:KyMaker = None
-    _mtrx:dict[int:str] = None
-
-    def __post_init__(self):
-        self._mtrx = KeyGenerators.matrix(44,44)
-        self._k1 = KyMaker(self._mtrx)
-        self._k2 = KyMaker(self._mtrx)
-        # print(self._k2._mstrk)
-        # self._combine()
-
-    def _combine(self)->KyUser:
-        kyusr2 = KyUser(self._k2)
-        tt ={'syssecret':self._k1._mstrk.decode(),
-             'syssec':self._k1._scnd,
-             # 'phases':json.dumps(self._k1._phases)}
-             'phases':self._k1._phases}
-
-        ttjs = json.dumps(tt)
-        print(ttjs)
-        return kyusr2
 
