@@ -1,12 +1,24 @@
-from ninja_hidden.core.crypt import KyMakerSystem,_randomize,_randomize2_n,_urandomize2_n,_randomize3,_randomize3a,_randomize4
-
+import random
+from ninja_hidden.core.crypt import KyMakerSystem,_randomize,_fingerize,_urandomize2_n,_randomize3,_randomize3a,_randomize4
+# sampleList = [100, 200, 300, 400, 500]
+# randomList = random.choices(sampleList, weights=[10, 20, 30, 40, 50], k=5)
+# print(randomList)
 
 og=b'4XOftc3lyGMwcWFkRnxP-5pPBokFDVUYC0wR8oiKOug='
 salt = 'Deng Mamm Am Strin999!!+11'
-bb = KyMakerSystem('petrit@rimshot.lu','FoNz@2410!',salt)
+tt = b'pp@ll.de'
+tt += b'\0'
+print(tt)
+print(len(tt))
+ttt = tt.decode()
+print(ttt)
+print(len(ttt))
+bb = KyMakerSystem('pp@ll.de','Fonz@2410!',salt)
 # bb = KyMakerSystem(og,salt)
-# print(bb)
-
+b = bytes('hoe long','utf-8')
+print(len(b))
+c = b.decode()
+print((len(c)))
 
 
 # ddd = KyMaker(generate_fktext(44,44))

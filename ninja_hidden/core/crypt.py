@@ -98,7 +98,7 @@ def _fingerprinting(fingerprint:list[int])->list:
         our.append(p)
     return our
 
-def _randomize2_n(token:str,passphrase:list)->dict:
+def _fingerize(token:str, passphrase:list)->dict:
     token = list(token)
     new_passphrase = [str(x) if x >= 10 else f"{KeyGenerators.text('alpha',1)}{x}" for x in passphrase]
     new_token = [f'{x}{KeyGenerators.text('all',1)}' for x in token]
@@ -270,6 +270,11 @@ class KyMakerOLD:
         # print(p)
 
 @dataclass(repr=False)
+class KyKeeper:
+    pass
+
+
+@dataclass(repr=False)
 class KyMakerBase:
     user:str
     pwd:str
@@ -280,29 +285,60 @@ class KyMakerBase:
     _is_printed:bool = False
 
     def __post_init__(self):
-        if isinstance(self.user,bytes):
-            raise ValueError(f'Wrong type for user .> needs email str')
+        if self.user is not None:
+            if isinstance(self.user,bytes) or len(self.user) < 1:
+                raise ValueError(f'Wrong type for user -> needs email str')
+            else:
+                if '@' in self.user:
+                    if not len(self.user.split('@')[1].split('.')) > 1:
+                        raise ValueError("Email contains no domain.")
+                else:
+                    raise ValueError(f'Wrong type for user .> needs email')
+        else:
+            raise RuntimeError('No User set!')
 
-        if not len(self.user.split('@')[1].split('.')) > 1:
-            raise ValueError(f'Wrong type for user .> needs email')
-
+        if self.pwd is not None:
+            if len(self.pwd) > 7 < 17:
+                check = [False,False,False,False]
+                err = ['Upper','lower','numbers','punctuation']
+                for x in self.pwd:
+                    if x.isupper():
+                        check[0]=True
+                    if x.islower():
+                        check[1] = True
+                    if x.isdigit():
+                        check[2] = True
+                    if x in string.punctuation:
+                        check[3] = True
+                res = [err[i] for i,x in enumerate(check) if not x ]
+                if all(check):
+                    print("Password ok.")
+                else:
+                    raise ValueError(f"Password must contain at least one of the follwoing:\n"
+                                     f"{' - '.join(res)}")
+            else:
+                raise ValueError(f"Passwords should be 8 - 16 characters. \n"
+                                 f"Yours was {len(self.pwd)}")
+        else:
+            raise RuntimeError('No Password set!')
         self._result = {}
 
         if self.salt is None:
-            self.salt = KeyGenerators.text('all', 22)
+            self.salt = KeyGenerators.text('all', 16)
 
         if self._saltuser is None:
-            self._saltuser = KeyGenerators.text('all',22)
+            self._saltuser = KeyGenerators.text('all',16)
+
 
         if self._k is None:
             user,rest = self.user.split('@')
             tld = rest.split('.')[1]
 
-            token_skel = f"{user}@{self.pwd}@{tld}"
+            token_skel = f"{user}@{self.pwd}@{self.salt}"
             ky = KeyGenerators.key_from_string(token_skel,bytes(self.salt,'utf-8'))
             self._k = ky
 
-        # self.generate()
+        self.generate()
 
     def generate(self):
         pass
@@ -316,17 +352,18 @@ class KyMakerSystem(KyMakerBase):
               f"SALT    :: {self.salt}\n"
               f"Finger  :: {self._fp['fingerprint']}\n"
               f"MATRIX  ::\n"
-              f"{'\n'.join([v for k,v in self._mtrx.items()])}")
-        ttx = "Informations have altready been provided."
+              f"{'\n'.join([v for k,v in self._mtrx.items()])[:-1]}")
+        ttx = "Informations have already been provided."
         tx=atx
         if self._is_printed:
             tx = ttx
+        self._is_printed = True
         return tx
 
     def generate(self)->dict:
         #First iteration
         randdm = _randomize(self._k.decode(),1)
-        fp = _randomize2_n(randdm['key'],randdm['passkey'])
+        fp = _fingerize(randdm['key'], randdm['passkey'])
         self._fp = fp
 
         #Second iteration
@@ -356,8 +393,10 @@ class KyMakerSystem(KyMakerBase):
         encoded = f_ky.encrypt(mtrx_enc)
 
         #Strip the encoded to hide in matrix
-        encoded_h = int(len(encoded)/44)
-        if (len(encoded)/44)%encoded_h != 0:
+        line_len = len(self._mtrx[0])
+        print("LINEN",line_len,len(self._mtrx))
+        encoded_h = int(len(encoded)/line_len)
+        if (len(encoded)/line_len)%encoded_h != 0:
             encoded_h += 1
         start = len(mtrx)
         end = len(mtrx)+encoded_h
@@ -365,8 +404,8 @@ class KyMakerSystem(KyMakerBase):
         mtrx_add = {}
         enc_str = str
         for c in range(start,end):
-            tmp = encoded[cnt:cnt+44]
-            cnt +=44
+            tmp = encoded[cnt:cnt+line_len]
+            cnt +=line_len
             mtrx_add[c] = tmp.decode()
         for k,v in mtrx_add.items():
             mtrx[k] = v
@@ -379,11 +418,8 @@ class KyMakerSystem(KyMakerBase):
         return out
 
 
-
-
-
 @dataclass(init=False)
-class KyUser:
+class KyUserBase:
     _token:str
     _phase:dict
     _scnd:str

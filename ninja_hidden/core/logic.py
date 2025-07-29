@@ -1,4 +1,5 @@
 import random
+import secrets
 import string
 import base64
 import hashlib
@@ -63,20 +64,20 @@ def generate_char_by_indx(mode: str, idx: int) ->str:
     return chosen_list[idx]
 
 def generate_chars(mode:str, width: int = 80) ->str:
-    mm =_libaccess(mode)
-    # print(mm)
-    out = ""
-    if width == 1:
-        chosen_list = random.choice(mm)
-        char = random.choice(chosen_list)
-        out = char
-
-    else:
-        while len(out) < width+1:
-            chosen_list = random.choice(mm)
-            char = random.choice(chosen_list)
-            out += char
-    return out
+    # mm =_libaccess(mode)
+    # # print(mm)
+    # out = ""
+    # if width == 1:
+    #     chosen_list = random.choice(mm)
+    #     char = secrets.choice(chosen_list)
+    #     out = char
+    #
+    # else:
+    #     while len(out) < width+1:
+    #         chosen_list = random.choice(mm)
+    #         char = secrets.choice(chosen_list)
+    #         out += char
+    return secrets.token_urlsafe(width)
 
 
 def generate_fktext(witdh:int,height:int):

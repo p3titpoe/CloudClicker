@@ -1,4 +1,4 @@
-from ninja_hidden.core.crypt import KyCombinator,_randomize2_n,_urandomize2_n
+from ninja_hidden.core.crypt import KyCombinator,_fingerize,_urandomize2_n
 
 
 # ddd = KyMaker(generate_fktext(44,44))
@@ -11,7 +11,7 @@ passfrd = {1: [0, 2, 5, 5, 14, 13, 20, 2, 17, 3, 3, 3, 41, 23, 33, 9, 41, 14, 30
            3: [36, 11, 5, 16, 38, 42, 21, 2, 18, 39, 28, 20, 40, 1, 3, 35, 6, 19, 25, 8, 14, 43, 0, 15, 22, 10, 41, 17,31, 13, 27, 32, 26, 29, 9, 24, 7, 37, 12, 33, 23, 4, 34, 30],
            }
 passfr = passfrd[1]
-res = _randomize2_n(roken,passfr)
+res = _fingerize(roken, passfr)
 
 # vvv = KyCombinator()
 # ccc = vvv._combine()
