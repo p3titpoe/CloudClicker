@@ -87,7 +87,7 @@ def generate_fktext(witdh:int,height:int):
 
 def generate_key():
     key = Fernet.generate_key()
-    print('KEY :: ',key)
+    # print('KEY :: ',key)
     # key = b'q5WzHVJE0Gzpdlj_MwjFBS2yTcpGhyePglvfz02548U='
     # key =
     return key

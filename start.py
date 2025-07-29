@@ -3,8 +3,9 @@ from ninja_hidden.core.crypt import KyMakerSystem,_randomize,_randomize2_n,_uran
 
 og=b'4XOftc3lyGMwcWFkRnxP-5pPBokFDVUYC0wR8oiKOug='
 salt = 'Deng Mamm Am Strin999!!+11'
-bb = KyMakerSystem(og,salt)
-
+bb = KyMakerSystem('petrit@rimshot.lu','FoNz@2410!',salt)
+# bb = KyMakerSystem(og,salt)
+# print(bb)
 
 
 

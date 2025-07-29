@@ -105,7 +105,7 @@ def _randomize2_n(token:str,passphrase:list)->dict:
     new_token.extend(new_passphrase)
     fingerprint = []
     res =_randomize(new_token,1)
-    print("RANDD :: ",res)
+    # print("RANDD :: ",res)
     fingerprint = _fingerprinting(res['passkey'])
     return {'fingerprint':"".join(fingerprint),'token':res['key'],'olpass':res['passkey'],'ogfp':fingerprint}
 
@@ -271,17 +271,38 @@ class KyMakerOLD:
 
 @dataclass(repr=False)
 class KyMakerBase:
+    user:str
+    pwd:str
+    salt:str = None
+    _saltuser = None
     _k:bytes = None
-    _salt:str = None
     _result:dict = None
+    _is_printed:bool = False
 
     def __post_init__(self):
+        if isinstance(self.user,bytes):
+            raise ValueError(f'Wrong type for user .> needs email str')
+
+        if not len(self.user.split('@')[1].split('.')) > 1:
+            raise ValueError(f'Wrong type for user .> needs email')
+
         self._result = {}
-        if self._salt is None:
-            self._salt = KeyGenerators.text('all',22)
+
+        if self.salt is None:
+            self.salt = KeyGenerators.text('all', 22)
+
+        if self._saltuser is None:
+            self._saltuser = KeyGenerators.text('all',22)
+
         if self._k is None:
-            self._k = KeyGenerators.key()
-        self.generate()
+            user,rest = self.user.split('@')
+            tld = rest.split('.')[1]
+
+            token_skel = f"{user}@{self.pwd}@{tld}"
+            ky = KeyGenerators.key_from_string(token_skel,bytes(self.salt,'utf-8'))
+            self._k = ky
+
+        # self.generate()
 
     def generate(self):
         pass
@@ -290,13 +311,29 @@ class KyMakerBase:
 @dataclass(repr=False)
 class KyMakerSystem(KyMakerBase):
 
-    def generate(self):
+    def __repr__(self):
+        atx = (f"KEY     :: {self._k.decode()}\n"
+              f"SALT    :: {self.salt}\n"
+              f"Finger  :: {self._fp['fingerprint']}\n"
+              f"MATRIX  ::\n"
+              f"{'\n'.join([v for k,v in self._mtrx.items()])}")
+        ttx = "Informations have altready been provided."
+        tx=atx
+        if self._is_printed:
+            tx = ttx
+        return tx
+
+    def generate(self)->dict:
+        #First iteration
         randdm = _randomize(self._k.decode(),1)
         fp = _randomize2_n(randdm['key'],randdm['passkey'])
-        print(randdm)
-        print(fp)
+        self._fp = fp
+
+        #Second iteration
         mtrx = KeyGenerators.matrix(44,44)
         mtrx_sig = _randomize2(mtrx,self._k.decode())
+        self._mtrx = mtrx_sig['mtrx']
+        #Prepare the sig for encoding
         prep = {k:None for k in range(0,11)}
         for p in mtrx_sig['passkey']:
             for i,n in enumerate(p):
@@ -304,29 +341,42 @@ class KyMakerSystem(KyMakerBase):
                 if prep[i] is None:
                     prep[i] = []
                 ch = n
-                # if n<10:
-                #     ch=f"{KeyGenerators.text('alpha',1)}{n}"
                 prep[i].append(ch)
 
         msb_fp = _fingerprinting(prep[0])
         msb = "".join(msb_fp)
         lsb_fp = _fingerprinting(prep[1])
         lsb = "".join(lsb_fp)
-        for m in [msb,lsb]:
-            if len(m) != 88:
-                diff =  88-(len(m))
-                print(diff)
-                sfix = '@'*diff
-                m = m+sfix
+        sfx= " "
+        mtrx_enc = f"{msb}{sfx}{lsb}"
+        mtrx_enc = bytes(mtrx_enc,'utf-8')
 
-        print(len(msb))
-        print(len(lsb))
-        # prep_mtrx = _randomize(_fingerprinting(prep),1)
-        # fp_mtrx = _randomize2_n(prep_mtrx['key'],prep_mtrx['passkey'])
-        # print(fp_mtrx)
-        # print(prep_mtrx)
-        #
-        # print(_urandomize2_n(fp_mtrx['fingerprint']))
+        #Encode the mtrx res
+        f_ky = Fernet(self._k)
+        encoded = f_ky.encrypt(mtrx_enc)
+
+        #Strip the encoded to hide in matrix
+        encoded_h = int(len(encoded)/44)
+        if (len(encoded)/44)%encoded_h != 0:
+            encoded_h += 1
+        start = len(mtrx)
+        end = len(mtrx)+encoded_h
+        cnt = 0
+        mtrx_add = {}
+        enc_str = str
+        for c in range(start,end):
+            tmp = encoded[cnt:cnt+44]
+            cnt +=44
+            mtrx_add[c] = tmp.decode()
+        for k,v in mtrx_add.items():
+            mtrx[k] = v
+
+        out = {'key':self._k,
+               'fingerprint':fp,
+               'salt': self.salt,
+               'mtrx': mtrx,
+               }
+        return out
 
 
 
