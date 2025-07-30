@@ -199,6 +199,8 @@ def _randomize4(key:bytes|str)->dict:
         i+=2
     return {'key':''.join(msb),'passkey':lsb}
 
+def _usr_salt()->str:
+    pass
 ########################################################################################################################
 # Maker & Userclasses
 ########################################################################################################################
@@ -223,6 +225,9 @@ class KyMakerBase:
                   12:'Wrong type for user .> needs email',
                   13:'No User set!',
                   20: ''}
+
+    def __repr__(self):
+        return "Nothing to show."
 
     def __post_init__(self):
         if self.user is not None:
@@ -287,7 +292,7 @@ class KyMakerBase:
 @dataclass(repr=False)
 class KyMakerSystem(KyMakerBase):
 
-    def __repr__(self):
+    def show(self):
         atx = (f"KEY     :: {self._k.decode()}\n"
               f"SALT    :: {self.salt}\n"
               f"Finger  :: {self._fp['fingerprint']}\n"
@@ -303,6 +308,7 @@ class KyMakerSystem(KyMakerBase):
     def generate(self)->dict:
         #First iteration
         randdm = _randomize(self._k.decode(),1)
+        print(randdm)
         fp = _fingerize(randdm['key'], randdm['passkey'])
         self._fp = fp
 

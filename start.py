@@ -6,20 +6,11 @@ from ninja_hidden.core.objs import KeyGenerators
 # print(randomList)
 
 og=b'4XOftc3lyGMwcWFkRnxP-5pPBokFDVUYC0wR8oiKOug='
-salt = 'Deng Mamm Am Strin999!!+11'
-tt = b'pp@ll.de'
-tt += b'\0'
-print(tt)
-print(len(tt))
-ttt = tt.decode()
-print(ttt)
-print(len(ttt))
-bb = KyMakerSystem('pp@ll.de','Fonz@2410!',salt)
-# bb = KyMakerSystem(og,salt)
-b = bytes('hoe long','utf-8')
-print(len(b))
-c = b.decode()
-print((len(c)))
+pwd = 'FoNz@2410'
+email = 'petrit@rimshot.lu'
+bb = KyMakerSystem(email,pwd,'Deng Mamm Am String wann se kacht!11')
+# print(bb.show())
+# print(bb.show())
 
 
 # ddd = KyMaker(generate_fktext(44,44))
