@@ -202,72 +202,7 @@ def _randomize4(key:bytes|str)->dict:
 ########################################################################################################################
 # Maker & Userclasses
 ########################################################################################################################
-@dataclass(repr=False)
-class KyMakerOLD:
-    """Generate the ingredients for the """
-    _mstrk:bytes = None
-    _token1:str = None
-    _token2:str = None
-    _phases:dict[int:list] = None
 
-    def __post_init__(self):
-        self._mstrk = KeyGenerators.key()
-        self._phases = {}
-        self._token1 = KeyGenerators.sha256(self._mstrk)
-        l1ky = _randomize(self._mstrk.decode(),1)
-        self._phases[3] = l1ky['passkey']
-        self._token2 = KeyGenerators.sha256(bytes(l1ky['key'],'utf-8'))
-        self._scnd = l1ky['key']
-        self._recon()
-
-    def _display(self)->str:
-        out = ""
-        for k, d in self.__dict__.items():
-            if 'mstrk' in k or 'scnd' in k:
-                pass
-            elif 'phases' in k:
-                for n in range(1,len(self._phases)+1):
-                    v = self._phases[n]
-                    out += f"{k[1:]}{n}  :: {v}  :: {len(v)}\n"
-            elif 'mtrx' in k:
-                pass
-                # tx = "\n".join([v for j, v in d.items()])
-                # out += f"{k[1:]} :: {tx}\n"
-            else:
-                out += f"{k[1:]} :: {d}\n "
-        return out
-
-    def __repr__(self)->str:
-        tx = self._display()
-        return tx
-
-    def _recombine(self,first:list,scnd:list)->list:
-        out = [(v,scnd[i]) for i,v in enumerate(first)]
-        return out
-
-    def _recon(self,w:int = 80,h:int = 44)->None:
-        if self._mtrx is None:
-            self._mtrx = KeyGenerators.matrix(w,h)
-        res = _randomize2(self._mtrx,self._scnd)
-        self._phases[1] = [v[0] for v in res['passkey']]
-        self._phases[2] = [v[1] for v in res['passkey']]
-        self._mtrx = res['mtrx']
-
-    def _rochade(self):
-        pass
-
-    def store(self,pth:Path = None):
-        if pth is None:
-            p = os.path.abspath(__file__)
-            pth = Path(p)
-        wkdir = pth.parent
-        with open(f"{wkdir}/ky.pub","w") as fh:
-            tx = "\n".join([v for j, v in self._mtrx.items()])
-            fh.write(tx)
-
-
-        # print(pth.parent)
-        # print(p)
 
 @dataclass(repr=False)
 class KyKeeper:
@@ -283,6 +218,11 @@ class KyMakerBase:
     _k:bytes = None
     _result:dict = None
     _is_printed:bool = False
+    _error_lib = {10:f'Wrong type for user -> needs email str',
+                  11:'Email contains no domain.',
+                  12:'Wrong type for user .> needs email',
+                  13:'No User set!',
+                  20: ''}
 
     def __post_init__(self):
         if self.user is not None:

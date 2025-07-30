@@ -1,5 +1,6 @@
 import random
 from ninja_hidden.core.crypt import KyMakerSystem,_randomize,_fingerize,_urandomize2_n,_randomize3,_randomize3a,_randomize4
+from ninja_hidden.core.objs import KeyGenerators
 # sampleList = [100, 200, 300, 400, 500]
 # randomList = random.choices(sampleList, weights=[10, 20, 30, 40, 50], k=5)
 # print(randomList)
