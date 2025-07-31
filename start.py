@@ -1,13 +1,14 @@
 import random
-from ninja_hidden.core.crypt import KyMakerSystem,_randomize,_fingerize,_urandomize2_n,_randomize3,_randomize3a,_randomize4
+from ninja_hidden.core.crypt import KyMakerSystem
 from ninja_hidden.core.objs import KeyGenerators
 # sampleList = [100, 200, 300, 400, 500]
 # randomList = random.choices(sampleList, weights=[10, 20, 30, 40, 50], k=5)
 # print(randomList)
 
 og=b'4XOftc3lyGMwcWFkRnxP-5pPBokFDVUYC0wR8oiKOug='
+# pwd = 'FoNz@2410'
 pwd = 'FoNz@2410'
-email = 'petrit@rimshot.lu'
+email = 'petrit.rimshot.lu'
 bb = KyMakerSystem(email,pwd,'Deng Mamm Am String wann se kacht!11')
 # print(bb.show())
 # print(bb.show())

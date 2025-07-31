@@ -12,4 +12,11 @@ class KeyGenerators(Enum):
     char_by_idx = generate_char_by_indx
     char_lists = _libaccess
 
-
+class UserRegError(Enum):
+    Byte = f'Wrong type for user -> needs email str'
+    TLD = 'Email contains no domain.'
+    NOMAIL = 'Wrong type for user .> needs email'
+    NOUSER ='No User set!'
+    PWDCONT = f'Password must contain at least one of the following:\n'
+    PWDLEN = 'Passwords should be 8 - 16 characters. \n'
+    NOPWD = 'No Passwprd set!'

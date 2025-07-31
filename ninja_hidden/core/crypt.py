@@ -1,209 +1,9 @@
-import random
-import os
-import json
 import string
 from pathlib import Path
-from .objs import KeyGenerators
+from .objs import KeyGenerators, UserRegError
 from dataclasses import dataclass
 from cryptography.fernet import Fernet
-
-########################################################################################################################
-# Obfuscation functions
-########################################################################################################################
-def _spliterize(tosplit,force_nmbr:int = None)->list:
-    rndm =[1,2,4]
-    if force_nmbr is not None:
-        rndm = [force_nmbr]
-    rndm_choice = random.choice(rndm)
-    new_order = []
-    lastpos = 0
-    end = int(len(tosplit)/rndm_choice)
-    for i in range(0,end):
-        new_order.append(tosplit[lastpos:lastpos+rndm_choice])
-        lastpos += rndm_choice
-    return new_order
-
-def _randomize(split:str|list,force_nmbr:int = None)->dict:
-    splitkey = split
-    if isinstance(splitkey,str):
-        splitkey = _spliterize(split,force_nmbr)
-
-    obj_len = len(splitkey)
-    passphrase = []
-    obj=[]
-    new_obj_len = 0
-    while new_obj_len < obj_len:
-        ch = random.choice(splitkey)
-        if ch is not None:
-            idx = splitkey.index(ch)
-            obj.append(ch)
-            passphrase.append(idx)
-            splitkey[idx] = None
-            new_obj_len += 1
-    new_k = [p for p in obj]
-    # print("PASS   ::",passphrase)
-    # print("SPLIT  ::",split)
-    # print(len("".join(new_k)))
-    return {'passkey':passphrase,'key':"".join(new_k)}
-
-def _randomize2(mtrx:dict, token:str, control:list=None)->dict:
-    grid_x = [x for x in range(0,len(mtrx[0]))]
-    grid_y = [x for x in mtrx.keys()]
-    ctrl = None if control is None else [x[1] for x in control]
-
-    pkc =[]
-    for l in token:
-        h = random.choice(grid_y)
-        w = 0
-        if ctrl is not None and h in ctrl:
-            idx = ctrl.index(h)
-            valw = control[idx][0]
-            w = random.choice(grid_x)
-            while w == valw:
-                w = random.choice(grid_x)
-        else:
-            w = random.choice(grid_x)
-
-        if (w,h) not in pkc:
-            pkc.append((w,h))
-            wed = list(mtrx[h])
-            wed[w] = l
-            mtrx[h] = "".join(wed)
-
-    return {'passkey':pkc,
-            'mtrx':mtrx,
-            'key':token}
-
-def _fingerprinting(fingerprint:list[int])->list:
-    our = []
-    for i,fp in enumerate(fingerprint):
-        p=""
-        if fp < 26:
-            p = f"{KeyGenerators.text('alpha',1)}{KeyGenerators.char_by_idx('upper',fp)}"
-
-        elif 26 <= fp <52:
-            cnt = fp-26
-            p = f"{KeyGenerators.text('digit',1)}{KeyGenerators.char_by_idx('upper',cnt)}"
-
-        elif 52 <= fp < 78:
-            cnt = fp-52
-            p = f"{KeyGenerators.text('alpha',1)}{KeyGenerators.char_by_idx('lower',cnt)}"
-
-        elif 78 <= fp < 104:
-            cnt = fp-78
-            p = f"{KeyGenerators.text('punct',1)}{KeyGenerators.char_by_idx('lower',cnt)}"
-
-        else:
-            p = str(fp)
-        our.append(p)
-    return our
-
-def _fingerize(token:str, passphrase:list)->dict:
-    token = list(token)
-    new_passphrase = [str(x) if x >= 10 else f"{KeyGenerators.text('alpha',1)}{x}" for x in passphrase]
-    new_token = [f'{x}{KeyGenerators.text('all',1)}' for x in token]
-    new_token.extend(new_passphrase)
-    fingerprint = []
-    res =_randomize(new_token,1)
-    # print("RANDD :: ",res)
-    fingerprint = _fingerprinting(res['passkey'])
-    return {'fingerprint':"".join(fingerprint),'token':res['key'],'olpass':res['passkey'],'ogfp':fingerprint}
-
-def _urandomize2_n(fingerprint:str,ctrl:list=None,ctrl2:list=None)->list:
-    cnt = int(len(fingerprint)/2)
-    print(cnt)
-    out = []
-    x = 0
-    while len(out) < cnt:
-        chunk = fingerprint[x:x+2]
-        first,scnd = list(chunk)
-
-        if first.isalpha():
-            if scnd.isupper():
-                ll = KeyGenerators.char_lists('upper')[0]
-                idx = ll.index(scnd)
-                out.append(idx)
-            if scnd.islower():
-                ll = KeyGenerators.char_lists('lower')[0]
-                idx = ll.index(scnd)
-                out.append(idx+52)
-
-        elif first.isdigit():
-            ll = KeyGenerators.char_lists('upper')[0]
-            idx = ll.index(scnd)
-            out.append(idx + 26)
-
-        elif first in list(string.punctuation):
-            ll = KeyGenerators.char_lists('lower')[0]
-            idx = ll.index(scnd)
-            out.append(idx + 78)
-        else:
-            print(f"None:  imput: {first} {scnd}  chunk: {chunk}")
-        x = x+2
-    return out
-
-def _urandomize2(matrix:dict,fingerprint):
-    pass
-
-def _randomize3a(passkey:list,key:str)->bytes:
-    chars = list(key)
-    out = {}
-    k = ""
-    for i,p in enumerate(passkey):
-        out[p] = key[i]
-
-    sortd = sorted(out)
-    for n in sortd:
-        k += out[n]
-    return bytes(k,'utf-8')
-
-def _randomize3(passkey:list,key:str):
-    chk = passkey
-    objlen = len(chk)
-    tocheck = {}
-    out = ""
-    step = 2
-    i = 0
-    cnt = 0
-    while cnt < objlen:
-        char = key[i:i+step]
-        # print(char)
-        tocheck[chk[cnt]] = char
-        cnt += 1
-        i+=2
-    order = sorted(tocheck)
-
-    for x in order:
-        out += tocheck[x]
-    return bytes(out,'utf-8')
-
-def _randomize4(key:bytes|str)->dict:
-    if isinstance(key,bytes):
-        key = key.decode()
-    cntlen = int(len(key)/2)
-    msb = []
-    lsb = []
-    i = 0
-    cnt = 0
-    while cnt < cntlen:
-        char = key[i:i+2]
-        if cnt < 44:
-            msb.append(char[0])
-        else:
-            if char.isdigit():
-                ch = char
-            else:
-                ch = char[1]
-            lsb.append(int(ch))
-        cnt += 1
-        i+=2
-    return {'key':''.join(msb),'passkey':lsb}
-
-def _usr_salt()->str:
-    pass
-########################################################################################################################
-# Maker & Userclasses
-########################################################################################################################
+from .crypt_funcs import *
 
 
 @dataclass(repr=False)
@@ -220,11 +20,6 @@ class KyMakerBase:
     _k:bytes = None
     _result:dict = None
     _is_printed:bool = False
-    _error_lib = {10:f'Wrong type for user -> needs email str',
-                  11:'Email contains no domain.',
-                  12:'Wrong type for user .> needs email',
-                  13:'No User set!',
-                  20: ''}
 
     def __repr__(self):
         return "Nothing to show."
@@ -232,15 +27,15 @@ class KyMakerBase:
     def __post_init__(self):
         if self.user is not None:
             if isinstance(self.user,bytes) or len(self.user) < 1:
-                raise ValueError(f'Wrong type for user -> needs email str')
+                return UserRegError.Byte
             else:
                 if '@' in self.user:
                     if not len(self.user.split('@')[1].split('.')) > 1:
-                        raise ValueError("Email contains no domain.")
+                        return UserRegError.TLD
                 else:
-                    raise ValueError(f'Wrong type for user .> needs email')
+                    return UserRegError.NOMAIL
         else:
-            raise RuntimeError('No User set!')
+            return UserRegError.NOUSER
 
         if self.pwd is not None:
             if len(self.pwd) > 7 < 17:
@@ -259,13 +54,11 @@ class KyMakerBase:
                 if all(check):
                     print("Password ok.")
                 else:
-                    raise ValueError(f"Password must contain at least one of the follwoing:\n"
-                                     f"{' - '.join(res)}")
+                   return UserRegError.PWDCONT
             else:
-                raise ValueError(f"Passwords should be 8 - 16 characters. \n"
-                                 f"Yours was {len(self.pwd)}")
+                return UserRegError.PWDLEN
         else:
-            raise RuntimeError('No Password set!')
+            return UserRegError.NOPWD
         self._result = {}
 
         if self.salt is None:
@@ -279,11 +72,9 @@ class KyMakerBase:
             user,rest = self.user.split('@')
             tld = rest.split('.')[1]
 
-            token_skel = f"{user}@{self.pwd}@{self.salt}"
+            token_skel = f"{user}@{self.salt}@{self.pwd}@{tld}"
             ky = KeyGenerators.key_from_string(token_skel,bytes(self.salt,'utf-8'))
             self._k = ky
-
-        self.generate()
 
     def generate(self):
         pass
@@ -307,14 +98,14 @@ class KyMakerSystem(KyMakerBase):
 
     def generate(self)->dict:
         #First iteration
-        randdm = _randomize(self._k.decode(),1)
+        randdm = randomize(self._k.decode(),1)
         print(randdm)
-        fp = _fingerize(randdm['key'], randdm['passkey'])
+        fp = fingerize(randdm['key'], randdm['passkey'])
         self._fp = fp
 
         #Second iteration
         mtrx = KeyGenerators.matrix(44,44)
-        mtrx_sig = _randomize2(mtrx,self._k.decode())
+        mtrx_sig = randomize2(mtrx,self._k.decode())
         self._mtrx = mtrx_sig['mtrx']
         #Prepare the sig for encoding
         prep = {k:None for k in range(0,11)}
@@ -326,9 +117,9 @@ class KyMakerSystem(KyMakerBase):
                 ch = n
                 prep[i].append(ch)
 
-        msb_fp = _fingerprinting(prep[0])
+        msb_fp = fingerprinting(prep[0])
         msb = "".join(msb_fp)
-        lsb_fp = _fingerprinting(prep[1])
+        lsb_fp = fingerprinting(prep[1])
         lsb = "".join(lsb_fp)
         sfx= " "
         mtrx_enc = f"{msb}{sfx}{lsb}"
@@ -377,7 +168,7 @@ class KyUserBase:
         # print(inp._mstrk)
 
     def _check_key(self)->bytes:
-        res = _randomize3(self._phase,self._scnd)
+        res = randomize3(self._phase,self._scnd)
         if KeyGenerators.sha256(res) == self._token:
             return res
 
